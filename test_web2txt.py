@@ -43,6 +43,18 @@ class CleanTests(unittest.TestCase):
         )
         self.assertNotIn("Contributors", text)
 
+    def test_instrumentals_are_left_out(self):
+        self.assertTrue(web2txt.is_instrumental("Pharao (Instrumental)"))
+        self.assertTrue(web2txt.is_instrumental("Instrumental"))
+        self.assertTrue(
+            web2txt.is_instrumental(
+                "Pharao",
+                "https://genius.com/Kollegah-pharao-instrumental-lyrics",
+            )
+        )
+        self.assertFalse(web2txt.is_instrumental("Pharao"))
+        self.assertFalse(web2txt.is_instrumental("Supa Dope Brothers"))
+
     def test_safe_name_is_a_windows_filename(self):
         self.assertEqual(web2txt.safe_name("24/7"), "24-7")
         self.assertEqual(web2txt.safe_name("Wer bist du?"), "Wer bist du")

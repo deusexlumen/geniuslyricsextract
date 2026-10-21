@@ -27,12 +27,15 @@ _job = {
     "total": 0,
     "documents": [],
     "failed": 0,
+    "log": [],
 }
 
 
 def job_snapshot() -> dict:
     with _lock:
-        return dict(_job)
+        data = dict(_job)
+        data["log"] = list(_job.get("log") or [])
+        return data
 
 
 def job_update(**fields) -> None:
@@ -86,7 +89,7 @@ def lookup_albums(name: str) -> dict:
 def _run(artist_name: str, album_ids: set[int]) -> None:
     try:
         session = web2txt.make_session()
-        job_update(status="running", message="Suche den Interpreten", album="", song="", index=0, total=0, documents=[], failed=0)
+        job_update(status="running", message="Suche den Interpreten", album="", song="", index=0, total=0, documents=[], failed=0, log=[])
         artist, choice = web2txt.resolve_artist(session, artist_name)
         if choice or artist is None:
             job_update(status="error", message="Der Interpret ist nicht eindeutig. Such noch einmal und wähl den Namen aus der Liste.")
@@ -111,10 +114,21 @@ def _run(artist_name: str, album_ids: set[int]) -> None:
             url_path = ROOT / web2txt.default_url_path(groups)
         web2txt.write_text(url_path, web2txt.render_url_file(groups))
         songs = [song for group in groups for song in group.songs]
-        job_update(message="Hol die Texte", total=len(songs), album="")
+        job_update(message="Hol die Texte", total=len(songs), album="", song="")
+        fetched: list[dict] = []
 
-        def on_song(index: int, total: int, title: str) -> None:
-            job_update(index=index, total=total, song=title, message="Hol die Texte")
+        def on_song(index: int, total: int, title: str, album: str = "") -> None:
+            fetched.append({"title": title, "album": album})
+            if len(fetched) > 40:
+                del fetched[:-40]
+            job_update(
+                index=index,
+                total=total,
+                song=title,
+                album=album,
+                message="Hol die Texte",
+                log=list(fetched),
+            )
 
         _ok, failed, documents = web2txt.fetch_songs(
             session,
@@ -220,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
                 if _job["status"] == "running":
                     self._json(409, {"error": "Es läuft schon ein Download."})
                     return
-                _job.update(status="running", message="Start", documents=[], failed=0, index=0, total=0, song="", album="")
+                _job.update(status="running", message="Start", documents=[], failed=0, index=0, total=0, song="", album="", log=[])
             threading.Thread(target=_run, args=(name, album_ids), daemon=True).start()
             self._json(200, {"ok": True})
             return

@@ -273,6 +273,8 @@ def album_tracks(session: requests.Session, album_id: int) -> list[dict]:
         url = (song.get("url") or "").split("?")[0]
         if not url.lower().endswith("-lyrics") or url in seen:
             continue
+        if is_instrumental(song.get("title"), url):
+            continue
         seen.add(url)
         songs.append(song)
     return songs
@@ -355,9 +357,20 @@ def collect_album_query(session: requests.Session, album_name: str, artist_name:
     return [group_from_album(chosen, songs)], None
 
 
+def is_instrumental(title: str | None, url: str | None = None) -> bool:
+    if url and "-instrumental" in url.lower():
+        return True
+    if not title:
+        return False
+    return re.search(
+        r"(?i)(?:^|[\s\-(])instrumental(?:$|[\s)\].\-])",
+        title,
+    ) is not None
+
+
 def is_lyric_song(song: dict) -> bool:
     url = (song.get("url") or "").split("?")[0].lower()
-    return url.endswith("-lyrics")
+    return url.endswith("-lyrics") and not is_instrumental(song.get("title"), url)
 
 
 def collect_song(session: requests.Session, title: str, artist_name: str | None) -> tuple[list[AlbumGroup] | None, str | None]:
@@ -705,6 +718,19 @@ def song_file_text(title: str, body: str) -> str:
     return f"{title}\n{'=' * 40}\n\n{body.strip()}\n"
 
 
+def read_song_file(path: Path) -> tuple[str, str] | None:
+    if not path.is_file():
+        return None
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if len(lines) < 4 or lines[1] != "=" * 40 or lines[2] != "":
+        return None
+    title = lines[0].strip()
+    body = "\n".join(lines[3:]).strip()
+    if not title or not body:
+        return None
+    return title, body
+
+
 def render_document(songs: list[tuple[SongLink, str, str]]) -> str:
     first = songs[0][0]
     heading = " - ".join(part for part in (first.artist, first.album) if part) or first.title or "Lyrics"
@@ -751,15 +777,28 @@ def fetch_songs(
     failed: list[str] = []
     documents: list[Path] = []
     written: dict[str, tuple[SongLink, str, str]] = {}
+    songs = [song for song in songs if not is_instrumental(song.title, song.url)]
 
     if single_output and len(songs) != 1:
         raise SystemExit("--output gilt nur für eine URL.")
 
+    networked = False
     for index, song in enumerate(songs):
+        path = None if single_output else song_directory(target_dir, song) / song_filename(song, None)
+        cached = read_song_file(path) if path is not None else None
+        if cached and not is_instrumental(cached[0], song.url):
+            title, body = cached
+            print(f"[.] {title}  liegt schon da")
+            ok += 1
+            written[song.url] = (song, title, body)
+            if on_song:
+                on_song(index + 1, len(songs), title, song.album or "")
+            continue
         if on_song:
-            on_song(index + 1, len(songs), song.title or song.url)
-        if index:
+            on_song(index + 1, len(songs), song.title or song.url, song.album or "")
+        if networked:
             time.sleep(delay)
+        networked = True
         try:
             body, source, html_title = extract_document(session, song.url, raw=raw)
         except Exception as exc:

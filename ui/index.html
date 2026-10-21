@@ -122,6 +122,41 @@
       margin: 0.9rem 0 0;
     }
     #status.error { color: #7a1f1f; }
+    #progress { margin-top: 1.4rem; }
+    #prog-frac {
+      margin: 0;
+      font-family: Newsreader, Georgia, serif;
+      font-size: 2.4rem;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .bar {
+      height: 4px;
+      margin-top: 0.7rem;
+      background: var(--line);
+    }
+    #prog-fill {
+      height: 100%;
+      width: 0;
+      background: var(--stamp);
+    }
+    #prog-now {
+      margin: 0.85rem 0 0;
+      font-family: Newsreader, Georgia, serif;
+      font-size: 1.45rem;
+      line-height: 1.2;
+    }
+    #prog-where { margin: 0.2rem 0 0; color: var(--muted); }
+    #prog-log {
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    #prog-log li {
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    #prog-log .who { color: var(--muted); }
     .docs { margin: 1.2rem 0 0; padding: 0; list-style: none; }
     .docs button {
       width: 100%;
@@ -191,6 +226,15 @@
   </form>
 
   <p id="status" role="status"></p>
+  <section id="progress" hidden>
+    <p id="prog-frac"></p>
+    <div class="bar" id="prog-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Fortschritt">
+      <div id="prog-fill"></div>
+    </div>
+    <p id="prog-now"></p>
+    <p id="prog-where"></p>
+    <ol id="prog-log"></ol>
+  </section>
   <section id="result" hidden>
     <h1 id="artist-name"></h1>
     <p id="count"></p>
@@ -229,6 +273,7 @@
     let currentArtist = "";
     let pollTimer = 0;
     let lastFocus = null;
+    let seenSongs = [];
 
     function setStatus(text, isError) {
       statusLine.textContent = text || "";
@@ -391,26 +436,73 @@
       if (event.key === "Escape" && !sheet.hidden) closeSheet();
     });
 
+    function renderProgress(job) {
+      const progress = document.querySelector("#progress");
+      const frac = document.querySelector("#prog-frac");
+      const fill = document.querySelector("#prog-fill");
+      const bar = document.querySelector("#prog-bar");
+      const now = document.querySelector("#prog-now");
+      const where = document.querySelector("#prog-where");
+      const log = document.querySelector("#prog-log");
+      const running = job.status === "running";
+      const hasWork = running || job.status === "done" || seenSongs.length;
+      progress.hidden = !hasWork;
+      if (!hasWork) return;
+      const index = job.index || 0;
+      const total = job.total || 0;
+      frac.textContent = total ? index + " von " + total : (job.message || "Vorbereitung");
+      const pct = total ? Math.round((index / total) * 100) : 0;
+      fill.style.width = pct + "%";
+      bar.setAttribute("aria-valuenow", String(pct));
+      bar.setAttribute("aria-valuemax", "100");
+      now.textContent = job.song || "";
+      where.textContent = job.album || "";
+      const source = (job.log && job.log.length) ? job.log : seenSongs;
+      const older = (running ? source.slice(0, -1) : source).slice().reverse().slice(0, 12);
+      log.replaceChildren();
+      for (const entry of older) {
+        const item = document.createElement("li");
+        item.textContent = entry.title || "";
+        if (entry.album) {
+          const who = document.createElement("span");
+          who.className = "who";
+          who.textContent = "  " + entry.album;
+          item.appendChild(who);
+        }
+        log.appendChild(item);
+      }
+    }
+
+    function rememberSong(job) {
+      if (job.log && job.log.length) return;
+      if (!job.song) return;
+      const last = seenSongs[seenSongs.length - 1];
+      if (last && last.title === job.song && last.index === job.index) return;
+      seenSongs.push({ title: job.song, album: job.album || "", index: job.index || 0 });
+      if (seenSongs.length > 40) seenSongs.shift();
+    }
+
     function watch() {
       clearInterval(pollTimer);
       pollTimer = setInterval(async () => {
         const response = await fetch("/api/status");
         const job = await response.json();
         if (job.status === "running") {
-          const where = [job.album, job.song].filter(Boolean).join(", ");
-          const progress = job.total ? job.index + " von " + job.total : "";
-          setStatus([job.message, where, progress].filter(Boolean).join(". "));
+          rememberSong(job);
+          renderProgress(job);
+          setStatus(job.total ? "" : (job.message || "Vorbereitung"));
           return;
         }
         clearInterval(pollTimer);
         runButton.disabled = false;
         showButton.disabled = false;
+        renderProgress(job);
         if (job.status === "error") setStatus(job.message, true);
         if (job.status === "done") {
           setStatus(job.message, job.failed > 0);
           renderDocs(job.documents);
         }
-      }, 800);
+      }, 400);
     }
 
     runButton.addEventListener("click", async () => {
@@ -422,7 +514,9 @@
       runButton.disabled = true;
       showButton.disabled = true;
       docsBox.replaceChildren();
+      seenSongs = [];
       setStatus("Start…");
+      renderProgress({ status: "running", message: "Start", index: 0, total: 0 });
       try {
         await post("/api/run", { artist: currentArtist, album_ids: albumIds });
         watch();

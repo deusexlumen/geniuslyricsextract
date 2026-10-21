@@ -23,7 +23,9 @@ Alle Befehle laufen von diesem Ordner aus.
 python web2txt.py ui
 ```
 
-Der Browser öffnet `http://127.0.0.1:8765`. Die Seite läuft nur auf diesem Rechner. Interpret eintragen, Alben anzeigen, die gewünschten Veröffentlichungen angehakt lassen und `Texte holen` drücken. Für Ruffiction alle Haken lassen. Die Dateien liegen danach an denselben Orten wie bei den Befehlen von Hand.
+Der Browser öffnet `http://127.0.0.1:8765`. Die Seite läuft nur auf diesem Rechner. Interpret eintragen, Alben anzeigen, die gewünschten Veröffentlichungen angehakt lassen und `Texte holen` drücken. Für einen Interpreten mit wenigen Alben alle Haken lassen. Die Dateien liegen danach an denselben Orten wie bei den Befehlen von Hand.
+
+Während des Downloads zeigt die Seite eine große Zahl, zum Beispiel `120 von 400`, einen Balken und den Song, der gerade geholt wird. Darunter stehen die Songs, die in diesem Lauf schon durch sind. Ein neuer Song dauert ungefähr 1,5 bis 2 Sekunden. Eine Discographie mit rund 1000 Songs braucht etwa eine halbe Stunde. Ein Album mit 15 Songs ist in unter einer Minute fertig. Die Seite offen lassen. Ein Neuladen zeigt denselben Lauf wieder an.
 
 ## Mit dem Skill
 
@@ -94,7 +96,7 @@ Die URL-Datei ist die Liste, von der `fetch` ausgeht:
 https://genius.com/Genetikk-supa-dope-brothers-lyrics
 ```
 
-Jede Lyrics-URL endet auf `-lyrics`. Seiten mit `-annotated` oder `-sample` nimmt `collect` nicht auf.
+Jede Lyrics-URL endet auf `-lyrics`. `collect` lässt Seiten mit `-annotated` oder `-sample` weg. Instrumentals fallen vorher raus: der Titel enthält das Wort Instrumental, zum Beispiel `Pharao (Instrumental)`, oder die Adresse enthält `-instrumental`. Ein normaler Song, der das Wort nur im Text hat, bleibt drin.
 
 `fetch` legt die Texte hier ab:
 
@@ -140,6 +142,10 @@ python web2txt.py fetch lyrics/failed.txt --dir lyrics
 ```
 
 Ein Lauf ohne Fehler löscht eine alte `failed.txt`.
+
+## Nochmal holen
+
+`fetch` auf dieselbe URL-Datei lässt Songs aus, deren Textdatei schon da ist, und macht bei den fehlenden weiter. Schon geholte Songs erscheinen als `liegt schon da`. Das Album-Dokument wird am Ende neu geschrieben und enthält die alten und die neuen Songs. Instrumentals in einer älteren URL-Datei werden beim Holen übersprungen.
 
 ## Tests
 
