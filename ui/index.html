@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>web2txt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,480;6..72,560&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Lyric sheet, not a dashboard.
+       Paper and ink, because the result is a page of text.
+       Newsreader for the name and the lyrics: that is the reading.
+       Source Sans 3 for the controls.
+       One green stamp, only on the action that downloads.
+       Rows instead of cards: an album list is a tracklist.
+       Light only: a sheet of lyrics stays on paper.
+       ENERGY 1 / RHYTHM 2 / MOTION 1 */
+    :root {
+      --paper: #f4f6f3;
+      --ink: #17202b;
+      --muted: #3a463f;
+      --line: #d3d9d2;
+      --stamp: #174b36;
+      --on-stamp: #f4f7f5;
+      --sheet: #fbfcfa;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); color: var(--ink); }
+    body {
+      margin: 0 auto;
+      max-width: 38rem;
+      padding: 2.5rem 1.25rem 4rem;
+      font-family: "Source Sans 3", "Segoe UI", sans-serif;
+      font-size: 1.05rem;
+      line-height: 1.45;
+    }
+    header p {
+      margin: 0.2rem 0 0;
+      color: var(--muted);
+    }
+    .word {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    form {
+      display: flex;
+      gap: 0.6rem;
+      align-items: end;
+      margin-top: 1.75rem;
+    }
+    label { display: block; }
+    .field { flex: 1; }
+    .field span, .tools { color: var(--muted); }
+    input[type="text"] {
+      width: 100%;
+      margin-top: 0.35rem;
+      padding: 0.7rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--sheet);
+      color: var(--ink);
+      font: inherit;
+    }
+    button, .text-button {
+      border-radius: 4px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button {
+      min-height: 44px;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+    }
+    button.primary {
+      border-color: var(--stamp);
+      background: var(--stamp);
+      color: var(--on-stamp);
+    }
+    button:disabled { opacity: 0.55; cursor: default; }
+    .text-button {
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--stamp);
+      font-weight: 600;
+    }
+    :focus-visible {
+      outline: 2px solid var(--stamp);
+      outline-offset: 3px;
+    }
+    h1 {
+      margin: 2rem 0 0.25rem;
+      font-family: Newsreader, Georgia, serif;
+      font-weight: 560;
+      font-size: 3rem;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+    #count { margin: 0 0 0.5rem; color: var(--muted); }
+    .tools { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0.4rem 0 0.2rem; }
+    .row {
+      display: grid;
+      grid-template-columns: 1.25rem 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      min-height: 44px;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .row input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--stamp); }
+    .year { color: var(--muted); }
+    #run {
+      margin-top: 1.1rem;
+    }
+    #status {
+      min-height: 1.4rem;
+      margin: 0.9rem 0 0;
+    }
+    #status.error { color: #7a1f1f; }
+    .docs { margin: 1.2rem 0 0; padding: 0; list-style: none; }
+    .docs button {
+      width: 100%;
+      margin-top: 0.45rem;
+      text-align: left;
+    }
+    #choices button {
+      display: block;
+      width: 100%;
+      margin-top: 0.45rem;
+      text-align: left;
+    }
+    #sheet {
+      position: fixed;
+      inset: 0;
+      overflow: auto;
+      background: var(--sheet);
+      padding: 1.25rem 1.25rem 4rem;
+    }
+    #sheet[hidden] { display: none; }
+    #sheet-inner { max-width: 38rem; margin: 0 auto; }
+    #close { margin-bottom: 1rem; }
+    #sheet-body {
+      font-family: Newsreader, Georgia, serif;
+      font-size: 1.12rem;
+      line-height: 1.55;
+    }
+    #sheet-body h1 {
+      margin-top: 0;
+      font-size: 2.2rem;
+    }
+    #sheet-body h2 {
+      margin: 1.6rem 0 0.4rem;
+      font-size: 1.35rem;
+      font-weight: 560;
+    }
+    #sheet-body p { margin: 0; }
+    #sheet-body p.gap { height: 0.8rem; }
+    #sheet-body hr {
+      margin: 1.2rem 0;
+      border: 0;
+      border-top: 1px solid var(--line);
+    }
+    #sheet-body a { color: var(--stamp); }
+    @media (max-width: 640px) {
+      h1 { font-size: 2.3rem; }
+      form { flex-direction: column; align-items: stretch; }
+      #show, #run, #choices button, .docs button, #close { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="word">web2txt</p>
+    <p>Songtexte von Genius, als eine Datei pro Album.</p>
+  </header>
+
+  <form id="search">
+    <label class="field">
+      <span>Interpret</span>
+      <input id="artist" name="artist" type="text" placeholder="Ruffiction" autocomplete="off" required>
+    </label>
+    <button type="submit" id="show">Alben zeigen</button>
+  </form>
+
+  <p id="status" role="status"></p>
+  <section id="result" hidden>
+    <h1 id="artist-name"></h1>
+    <p id="count"></p>
+    <div class="tools">
+      <button type="button" class="text-button" id="all">Alle markieren</button>
+      <button type="button" class="text-button" id="none">Keine</button>
+    </div>
+    <div id="albums"></div>
+    <button type="button" class="primary" id="run">Texte holen</button>
+  </section>
+  <ul class="docs" id="docs" hidden></ul>
+
+  <div id="choices" hidden></div>
+
+  <div id="sheet" hidden>
+    <div id="sheet-inner">
+      <button type="button" id="close">Schließen</button>
+      <article id="sheet-body"></article>
+    </div>
+  </div>
+
+  <script>
+    const artistInput = document.querySelector("#artist");
+    const showButton = document.querySelector("#show");
+    const statusLine = document.querySelector("#status");
+    const result = document.querySelector("#result");
+    const artistName = document.querySelector("#artist-name");
+    const countLine = document.querySelector("#count");
+    const albumsBox = document.querySelector("#albums");
+    const docsBox = document.querySelector("#docs");
+    const choices = document.querySelector("#choices");
+    const runButton = document.querySelector("#run");
+    const sheet = document.querySelector("#sheet");
+    const sheetBody = document.querySelector("#sheet-body");
+    const closeButton = document.querySelector("#close");
+    let currentArtist = "";
+    let pollTimer = 0;
+    let lastFocus = null;
+
+    function setStatus(text, isError) {
+      statusLine.textContent = text || "";
+      statusLine.classList.toggle("error", Boolean(isError));
+    }
+
+    async function post(url, body) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Die Anfrage ist fehlgeschlagen.");
+      return data;
+    }
+
+    function renderChoices(options) {
+      result.hidden = true;
+      choices.hidden = false;
+      choices.replaceChildren();
+      const heading = document.createElement("h1");
+      heading.textContent = "Welcher Interpret?";
+      choices.appendChild(heading);
+      for (const option of options) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = option.name;
+        button.addEventListener("click", () => {
+          artistInput.value = option.name;
+          choices.hidden = true;
+          loadAlbums(option.name);
+        });
+        choices.appendChild(button);
+      }
+    }
+
+    function renderAlbums(data) {
+      choices.hidden = true;
+      currentArtist = data.artist;
+      artistName.textContent = data.artist;
+      const albums = data.albums || [];
+      countLine.textContent = albums.length === 1 ? "1 Veröffentlichung" : albums.length + " Veröffentlichungen";
+      albumsBox.replaceChildren();
+      docsBox.replaceChildren();
+      docsBox.hidden = true;
+      for (const album of albums) {
+        const label = document.createElement("label");
+        label.className = "row";
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = true;
+        box.value = String(album.id);
+        const name = document.createElement("span");
+        name.textContent = album.name;
+        const year = document.createElement("span");
+        year.className = "year";
+        year.textContent = album.year || "";
+        label.append(box, name, year);
+        albumsBox.appendChild(label);
+      }
+      result.hidden = false;
+      runButton.disabled = albums.length === 0;
+      if (!albums.length) setStatus("Genius hat dazu keine Alben.", true);
+    }
+
+    async function loadAlbums(name) {
+      showButton.disabled = true;
+      setStatus("Suche auf Genius…");
+      try {
+        const data = await post("/api/albums", { artist: name });
+        setStatus("");
+        if (data.choose) renderChoices(data.choose);
+        else if (data.error) setStatus(data.error, true);
+        else renderAlbums(data);
+      } catch (error) {
+        setStatus(error.message, true);
+      } finally {
+        showButton.disabled = false;
+      }
+    }
+
+    document.querySelector("#search").addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadAlbums(artistInput.value.trim());
+    });
+
+    document.querySelector("#all").addEventListener("click", () => {
+      albumsBox.querySelectorAll("input").forEach((box) => { box.checked = true; });
+    });
+    document.querySelector("#none").addEventListener("click", () => {
+      albumsBox.querySelectorAll("input").forEach((box) => { box.checked = false; });
+    });
+
+    function renderDocs(documents) {
+      docsBox.replaceChildren();
+      docsBox.hidden = !documents || !documents.length;
+      for (const doc of documents || []) {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = doc.label;
+        button.addEventListener("click", () => openSheet(doc.path, button));
+        item.appendChild(button);
+        docsBox.appendChild(item);
+      }
+    }
+
+    async function openSheet(path, button) {
+      lastFocus = button;
+      setStatus("Öffne das Dokument…");
+      const response = await fetch("/api/text?path=" + encodeURIComponent(path));
+      if (!response.ok) {
+        setStatus("Das Dokument lässt sich nicht öffnen.", true);
+        return;
+      }
+      const text = await response.text();
+      sheetBody.replaceChildren();
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith("## ")) {
+          const heading = document.createElement("h2");
+          heading.textContent = line.slice(3);
+          sheetBody.appendChild(heading);
+        } else if (line.startsWith("# http")) {
+          const paragraph = document.createElement("p");
+          const link = document.createElement("a");
+          link.href = line.slice(2).trim();
+          link.textContent = line.slice(2).trim();
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          paragraph.appendChild(link);
+          sheetBody.appendChild(paragraph);
+        } else if (line.startsWith("# ")) {
+          const heading = document.createElement("h1");
+          heading.textContent = line.slice(2);
+          sheetBody.appendChild(heading);
+        } else if (line === "---") {
+          sheetBody.appendChild(document.createElement("hr"));
+        } else if (!line) {
+          const gap = document.createElement("p");
+          gap.className = "gap";
+          sheetBody.appendChild(gap);
+        } else {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = line;
+          sheetBody.appendChild(paragraph);
+        }
+      }
+      setStatus("");
+      sheet.hidden = false;
+      closeButton.focus();
+    }
+
+    function closeSheet() {
+      sheet.hidden = true;
+      if (lastFocus) lastFocus.focus();
+    }
+    closeButton.addEventListener("click", closeSheet);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !sheet.hidden) closeSheet();
+    });
+
+    function watch() {
+      clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        const response = await fetch("/api/status");
+        const job = await response.json();
+        if (job.status === "running") {
+          const where = [job.album, job.song].filter(Boolean).join(", ");
+          const progress = job.total ? job.index + " von " + job.total : "";
+          setStatus([job.message, where, progress].filter(Boolean).join(". "));
+          return;
+        }
+        clearInterval(pollTimer);
+        runButton.disabled = false;
+        showButton.disabled = false;
+        if (job.status === "error") setStatus(job.message, true);
+        if (job.status === "done") {
+          setStatus(job.message, job.failed > 0);
+          renderDocs(job.documents);
+        }
+      }, 800);
+    }
+
+    runButton.addEventListener("click", async () => {
+      const albumIds = [...albumsBox.querySelectorAll("input:checked")].map((box) => Number(box.value));
+      if (!albumIds.length) {
+        setStatus("Wähl mindestens ein Album.", true);
+        return;
+      }
+      runButton.disabled = true;
+      showButton.disabled = true;
+      docsBox.replaceChildren();
+      setStatus("Start…");
+      try {
+        await post("/api/run", { artist: currentArtist, album_ids: albumIds });
+        watch();
+      } catch (error) {
+        setStatus(error.message, true);
+        runButton.disabled = false;
+        showButton.disabled = false;
+      }
+    });
+
+    const preset = new URLSearchParams(location.search).get("artist");
+    if (preset) {
+      artistInput.value = preset;
+      loadAlbums(preset);
+    }
+    fetch("/api/status").then((response) => response.json()).then((job) => {
+      if (job.status === "running") watch();
+      if (job.status === "done") {
+        setStatus(job.message, job.failed > 0);
+        renderDocs(job.documents);
+      }
+    });
+  </script>
+</body>
+</html>
