@@ -2,24 +2,34 @@
 
 Holt Songtexte von Genius und schreibt sie als Textdateien. Genius ist die Quelle, weil dort die meisten Lyrics liegen.
 
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Release](https://img.shields.io/github/v/release/deusexlumen/geniuslyricsextract)
+![Plattform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-informational)
+
 Zwei Ergebnisse pro Album:
 
 - eine URL-Datei, ein Song pro Zeile, in der Reihenfolge des Albums
 - ein Dokument mit allen Texten, plus eine Datei pro Song
 
+## Features
+
+- Lokale Oberfläche im Browser mit Live-Fortschritt: Zahl wie `120 von 400`, Balken, aktueller Song und Liste der fertigen Songs. Ein Neuladen zeigt denselben Lauf wieder.
+- URL-Datei in Album-Reihenfolge mit Metadaten: Interpret, Album und Jahr.
+- Eine Textdatei pro Song und ein Sammeldokument pro Album.
+- Überspringt Instrumentals sowie Seiten mit `-annotated` oder `-sample`.
+- Fortsetzbar: vorhandene Songs werden übersprungen (`liegt schon da`), Fehlschläge landen in `lyrics/failed.txt`.
+- Windows-sichere Dateinamen: `24/7` wird zu `24-7.txt`.
+- Grok-Skill `/genius-lyrics`.
+
 ## Schnellstart
 
 1. Das [ZIP-Archiv](https://github.com/deusexlumen/geniuslyricsextract/archive/refs/heads/main.zip) herunterladen.
 2. Entpacken und den Ordner `geniuslyricsextract-main` öffnen, nicht im ZIP bleiben.
-3. Unter Windows `start.bat` doppelklicken. Unter macOS oder Linux im Terminal in diesem Ordner `chmod +x start.sh && ./start.sh` ausführen.
+3. Windows, erstes Mal: `install.bat` doppelklicken. Das prüft auf Python 3.10 oder neuer, installiert bei Bedarf Python 3.12 über winget, richtet die Pakete ein und startet die Oberfläche. Wenn winget fehlt oder die Installation scheitert, erscheint eine kurze Anleitung.
+4. Windows, danach: `start.bat` reicht.
+5. macOS/Linux: im Terminal in diesem Ordner `chmod +x start.sh && ./start.sh` ausführen.
 
-Python 3.10 oder neuer muss bereits installiert sein. Beim ersten Start werden die benötigten Pakete automatisch eingerichtet. Danach öffnet sich der Browser unter `http://127.0.0.1:8765`. Die Seite läuft nur auf diesem Rechner.
-
-Interpret eintragen, Alben anzeigen, die gewünschten Veröffentlichungen angehakt lassen und `Texte holen` drücken. Für einen Interpreten mit wenigen Alben alle Haken lassen.
-
-Während des Downloads zeigt die Seite eine große Zahl, zum Beispiel `120 von 400`, einen Balken und den Song, der gerade geholt wird. Darunter stehen die Songs, die in diesem Lauf schon durch sind. Ein neuer Song dauert ungefähr 1,5 bis 2 Sekunden. Eine Discographie mit rund 1000 Songs braucht etwa eine halbe Stunde. Ein Album mit 15 Songs ist in unter einer Minute fertig. Die Seite offen lassen. Ein Neuladen zeigt denselben Lauf wieder an.
-
-Die Dateien liegen danach an denselben Orten wie bei den Befehlen von Hand.
+Python 3.10 oder neuer wird benötigt. Beim ersten Start werden die benötigten Pakete automatisch eingerichtet. Danach öffnet sich der Browser unter `http://127.0.0.1:8765`. Die Seite läuft nur auf diesem Rechner.
 
 Im Terminal geht dasselbe so:
 
@@ -28,17 +38,15 @@ pip install -r requirements.txt
 python web2txt.py ui
 ```
 
-## Mit dem Skill
+## Oberfläche
 
-In Grok den Skill `/genius-lyrics` aufrufen und Interpret plus Album nennen:
+Interpret eintragen, Alben anzeigen, die gewünschten Veröffentlichungen angehakt lassen und `Texte holen` drücken. Für einen Interpreten mit wenigen Alben alle Haken lassen.
 
-```text
-/genius-lyrics Genetikk, Album Voodoozirkus
-```
+Während des Downloads zeigt die Seite eine große Zahl, zum Beispiel `120 von 400`, einen Balken und den Song, der gerade geholt wird. Darunter stehen die Songs, die in diesem Lauf schon durch sind. Ein neuer Song dauert ungefähr 1,5 bis 2 Sekunden. Eine Discographie mit rund 1000 Songs braucht etwa eine halbe Stunde. Ein Album mit 15 Songs ist in unter einer Minute fertig. Die Seite offen lassen. Ein Neuladen zeigt denselben Lauf wieder an.
 
-Der Skill sucht den Interpreten und das Album, schreibt die URLs und baut das Dokument. Ohne Albumnamen kommt zuerst die Albumliste. „Nur die Links“ stoppt nach der URL-Datei.
+Die Dateien liegen danach an denselben Orten wie bei den Befehlen von Hand.
 
-## Von Hand
+## CLI
 
 Alben eines Interpreten anzeigen. Der Befehl endet mit Code 2 und schreibt noch keine Datei:
 
@@ -82,6 +90,16 @@ python web2txt.py fetch bookmarks.html --dir lyrics
 ```
 
 `--no-combine` lässt das Sammeldokument weg. `--output datei.txt` schreibt bei genau einer URL nur diese eine Datei. `--delay 0.5` verlängert die Pause zwischen den Seiten. `--raw` nimmt den ganzen Seitentext, ohne den Genius-Lyrics-Filter.
+
+## Mit dem Skill
+
+In Grok den Skill `/genius-lyrics` aufrufen und Interpret plus Album nennen:
+
+```text
+/genius-lyrics Genetikk, Album Voodoozirkus
+```
+
+Der Skill sucht den Interpreten und das Album, schreibt die URLs und baut das Dokument. Ohne Albumnamen kommt zuerst die Albumliste. „Nur die Links“ stoppt nach der URL-Datei.
 
 ## Dateien
 
