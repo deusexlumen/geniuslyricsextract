@@ -21,7 +21,8 @@ if not defined PYEXE (
 
 if not defined PYEXE (
   echo Python 3.10 oder neuer wurde nicht gefunden.
-  echo Bitte Python von https://www.python.org/downloads/ installieren
+  echo Bitte zuerst install.bat doppelklicken. Das richtet Python bei Bedarf automatisch ein.
+  echo Oder Python von https://www.python.org/downloads/ installieren
   echo und dabei "Add python.exe to PATH" aktivieren.
   echo.
   pause
